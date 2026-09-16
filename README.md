@@ -16,7 +16,7 @@ Built with [PyAudioWPatch](https://github.com/s0d3s/PyAudioWPatch) (WASAPI loopb
 ## Quick start (from source)
 
 ```powershell
-git clone https://github.com/YOUR_USERNAME/dual-audio-router.git
+git clone https://github.com/Navid-47/dual-audio-router.git
 cd dual-audio-router
 python -m venv .venv
 .venv\Scripts\activate
