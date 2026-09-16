@@ -1,0 +1,2 @@
+PyAudioWPatch>=0.2.12.7
+customtkinter>=5.2.0

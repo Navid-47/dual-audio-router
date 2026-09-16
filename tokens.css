@@ -1,0 +1,50 @@
+/* Hallmark · macrostructure: Workbench · genre: modern-minimal · theme: Cobalt
+ * tone: utilitarian · anchor hue: electric cobalt · component: desktop-app
+ * audience: Windows users sharing audio · use: route loopback to 2 BT outputs
+ */
+
+:root {
+  /* Paper */
+  --color-paper: oklch(98.5% 0.004 250);
+  --color-paper-2: oklch(96% 0.006 250);
+  --color-paper-3: oklch(93% 0.008 250);
+
+  /* Ink */
+  --color-ink: oklch(24% 0.02 258);
+  --color-ink-2: oklch(34% 0.018 257);
+  --color-ink-3: oklch(52% 0.014 256);
+
+  /* Rules */
+  --color-rule: oklch(88% 0.01 250);
+  --color-rule-2: oklch(82% 0.012 252);
+
+  /* Signal */
+  --color-accent: oklch(58% 0.2 256);
+  --color-accent-hover: oklch(50% 0.19 256);
+  --color-accent-ink: oklch(98.5% 0.004 250);
+
+  /* Graphite (log / terminal panel) */
+  --color-graphite: oklch(22% 0.016 260);
+  --color-graphite-ink: oklch(92% 0.01 258);
+  --color-graphite-muted: oklch(68% 0.012 258);
+
+  /* Status */
+  --color-success: oklch(48% 0.14 150);
+  --color-danger: oklch(52% 0.18 25);
+
+  /* Type */
+  --font-display: "Space Grotesk", "Segoe UI Semibold", sans-serif;
+  --font-body: Inter, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+
+  /* Space (4pt scale) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+}

@@ -1,0 +1,117 @@
+# =============================================================================
+# Dual Audio Router — .gitignore
+# Keeps secrets, build output, and machine-local tooling out of GitHub.
+# =============================================================================
+
+# --- Secrets & credentials (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+secrets.*
+*_secrets.*
+.token
+.npmrc
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.dylib
+*.pyd
+.Python
+*.egg
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+dmypy.json
+.pytype/
+cython_debug/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# --- Build & distribution (PyInstaller / Inno Setup) ---
+build/
+dist/
+installer/output/
+*.exe
+*.msi
+*.spec.bak
+*.manifest
+*.pkg
+
+# Keep the PyInstaller spec — it is source, not a build artifact:
+!installer/dual_audio_router.spec
+
+# --- Node / npx (e.g. `npx skills add …` run in this folder) ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+skills-lock.json
+
+# --- Cursor / agent skills (install locally; not part of this repo) ---
+.agents/
+.cursor/
+
+# --- Hallmark local session cache (machine-specific design history) ---
+.hallmark/
+
+# --- IDE & editors ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# --- OS junk ---
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# --- Logs & local runtime ---
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+.cache/
+
+# --- Local overrides (optional per-developer config) ---
+*.local
+local_settings.py
+config.local.*

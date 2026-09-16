@@ -1,0 +1,36 @@
+name: Build Windows
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: PyInstaller build
+        run: pyinstaller --noconfirm installer/dual_audio_router.spec
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: Build installer
+        run: iscc installer/setup.iss
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DualAudioRouter-Windows
+          path: |
+            dist/Dual Audio Router/
+            installer/output/DualAudioRouter-Setup.exe
