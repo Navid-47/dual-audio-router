@@ -34,15 +34,29 @@ SETUP_STEPS = [
 
 
 class DualAudioRouterApp(ctk.CTk):
+    _STACK_BREAKPOINT = 760
+    _NARROW_BREAKPOINT = 640
+
     def __init__(self) -> None:
         super().__init__()
         self._apply_theme()
 
         self.title(f"Dual Audio Router")
-        self.minsize(800, 680)
-        self.geometry("860x720")
+        self.minsize(520, 560)
+        self.geometry("860x680")
         self.configure(fg_color=TOKENS.paper)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        self._stacked_layout = False
+        self._narrow_actions = False
+        self._workbench_grid: ctk.CTkFrame | None = None
+        self._setup_panel: ctk.CTkFrame | None = None
+        self._controls_panel: ctk.CTkFrame | None = None
+        self._action_bar: ctk.CTkFrame | None = None
+        self._action_left: ctk.CTkFrame | None = None
+        self._action_right: ctk.CTkFrame | None = None
+        self._step_labels: list[ctk.CTkLabel] = []
+        self._meta_value_labels: list[ctk.CTkLabel] = []
 
         self._log_queue: queue.Queue[str] = queue.Queue()
         self._router = AudioRouter(
@@ -54,6 +68,8 @@ class DualAudioRouterApp(ctk.CTk):
         self._device_by_label: dict[str, dict[str, Any]] = {}
 
         self._build_ui()
+        self.bind("<Configure>", self._on_window_configure)
+        self.after_idle(self._apply_responsive_layout)
         self._refresh_devices()
         self._poll_log_queue()
 
@@ -83,10 +99,13 @@ class DualAudioRouterApp(ctk.CTk):
 
     def _build_ui(self) -> None:
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(3, weight=1)
 
         self._build_nav()
         self._build_workbench()
+        self._build_action_bar()
         self._build_log_panel()
 
     def _build_nav(self) -> None:
@@ -129,9 +148,8 @@ class DualAudioRouterApp(ctk.CTk):
 
     def _build_workbench(self) -> None:
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=1, column=0, sticky="nsew", padx=20, pady=(16, 8))
+        body.grid(row=1, column=0, sticky="ew", padx=20, pady=(16, 8))
         body.grid_columnconfigure(0, weight=1)
-        body.grid_rowconfigure(2, weight=1)
 
         eyebrow = ctk.CTkLabel(
             body,
@@ -141,24 +159,26 @@ class DualAudioRouterApp(ctk.CTk):
         )
         eyebrow.grid(row=0, column=0, sticky="w", pady=(0, 4))
 
-        ctk.CTkLabel(
+        self._headline = ctk.CTkLabel(
             body,
             text="Route system audio to two Bluetooth headphones",
             font=self._font_display(22, "bold"),
             text_color=TOKENS.ink,
             anchor="w",
-        ).grid(row=1, column=0, sticky="w", pady=(0, 12))
+            wraplength=760,
+            justify="left",
+        )
+        self._headline.grid(row=1, column=0, sticky="ew", pady=(0, 12))
 
-        grid = ctk.CTkFrame(body, fg_color="transparent")
-        grid.grid(row=2, column=0, sticky="nsew")
-        grid.grid_columnconfigure(0, weight=2)
-        grid.grid_columnconfigure(1, weight=3)
-        grid.grid_rowconfigure(0, weight=1)
+        self._workbench_grid = ctk.CTkFrame(body, fg_color="transparent")
+        self._workbench_grid.grid(row=2, column=0, sticky="ew")
+        self._workbench_grid.grid_columnconfigure(0, weight=2)
+        self._workbench_grid.grid_columnconfigure(1, weight=3)
 
-        self._build_setup_panel(grid)
-        self._build_controls_panel(grid)
+        self._setup_panel = self._build_setup_panel(self._workbench_grid)
+        self._controls_panel = self._build_controls_panel(self._workbench_grid)
 
-    def _build_setup_panel(self, parent: ctk.CTkFrame) -> None:
+    def _build_setup_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
         panel = self._panel(parent)
         panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
         panel.grid_columnconfigure(0, weight=1)
@@ -172,8 +192,9 @@ class DualAudioRouterApp(ctk.CTk):
 
         steps = ctk.CTkFrame(panel, fg_color="transparent")
         steps.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 12))
+        steps.grid_columnconfigure(0, weight=1)
         for i, step in enumerate(SETUP_STEPS, start=1):
-            ctk.CTkLabel(
+            step_label = ctk.CTkLabel(
                 steps,
                 text=f"{i}. {step}",
                 font=self._font_body(13),
@@ -181,7 +202,9 @@ class DualAudioRouterApp(ctk.CTk):
                 anchor="w",
                 justify="left",
                 wraplength=300,
-            ).pack(anchor="w", pady=3)
+            )
+            step_label.grid(row=i - 1, column=0, sticky="ew", pady=3)
+            self._step_labels.append(step_label)
 
         ctk.CTkFrame(panel, fg_color=TOKENS.rule, height=1, corner_radius=0).grid(
             row=2, column=0, sticky="ew", padx=16, pady=4
@@ -197,8 +220,10 @@ class DualAudioRouterApp(ctk.CTk):
         self._default_label = self._meta_row(panel, 4, "Default output")
         self._loopback_label = self._meta_row(panel, 5, "Loopback tap")
         self._rate_label = self._meta_row(panel, 6, "Sample rate")
-
-        ctk.CTkLabel(panel, text="").grid(row=7, column=0)
+        self._meta_value_labels.extend(
+            [self._default_label, self._loopback_label, self._rate_label]
+        )
+        return panel
 
     def _meta_row(self, parent: ctk.CTkFrame, row: int, label: str) -> ctk.CTkLabel:
         ctk.CTkLabel(
@@ -222,9 +247,10 @@ class DualAudioRouterApp(ctk.CTk):
         parent.grid_columnconfigure(1, weight=1)
         return value
 
-    def _build_controls_panel(self, parent: ctk.CTkFrame) -> None:
+    def _build_controls_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
         panel = self._panel(parent)
         panel.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        panel.grid_columnconfigure(0, weight=0)
         panel.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(
@@ -273,12 +299,25 @@ class DualAudioRouterApp(ctk.CTk):
             corner_radius=TOKENS.radius_sm,
         )
         self._combo_b.grid(row=2, column=1, sticky="ew", padx=(8, 16), pady=8)
+        return panel
 
-        actions = ctk.CTkFrame(panel, fg_color="transparent")
-        actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=16, pady=(20, 16))
+    def _build_action_bar(self) -> None:
+        self._action_bar = self._panel(self)
+        self._action_bar.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 8))
+        self._action_bar.grid_columnconfigure(0, weight=1)
+        self._action_bar.grid_columnconfigure(1, weight=0)
+
+        self._action_left = ctk.CTkFrame(self._action_bar, fg_color="transparent")
+        self._action_left.grid(row=0, column=0, sticky="ew", padx=12, pady=12)
+        self._action_left.grid_columnconfigure(0, weight=1)
+
+        self._action_right = ctk.CTkFrame(self._action_bar, fg_color="transparent")
+        self._action_right.grid(row=0, column=1, sticky="e", padx=12, pady=12)
+        self._action_right.grid_columnconfigure(0, weight=1)
+        self._action_right.grid_columnconfigure(1, weight=1)
 
         self._refresh_btn = ctk.CTkButton(
-            actions,
+            self._action_left,
             text="Refresh devices",
             command=self._refresh_devices,
             font=self._font_body(13),
@@ -290,10 +329,10 @@ class DualAudioRouterApp(ctk.CTk):
             corner_radius=TOKENS.radius_sm,
             height=36,
         )
-        self._refresh_btn.pack(side="left", padx=(0, 8))
+        self._refresh_btn.grid(row=0, column=0, sticky="ew")
 
         self._start_btn = ctk.CTkButton(
-            actions,
+            self._action_right,
             text="Start routing",
             command=self._start_routing,
             font=self._font_body(13, "bold"),
@@ -302,26 +341,86 @@ class DualAudioRouterApp(ctk.CTk):
             text_color=TOKENS.accent_ink,
             corner_radius=TOKENS.radius_sm,
             height=36,
+            width=140,
         )
-        self._start_btn.pack(side="left", padx=8)
+        self._start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
         self._stop_btn = ctk.CTkButton(
-            actions,
+            self._action_right,
             text="Stop",
             command=self._stop_routing,
             state="disabled",
-            font=self._font_body(13),
+            font=self._font_body(13, "bold"),
             fg_color=TOKENS.danger,
             hover_color=TOKENS.danger_hover,
             text_color=TOKENS.accent_ink,
             corner_radius=TOKENS.radius_sm,
             height=36,
+            width=100,
         )
-        self._stop_btn.pack(side="left", padx=8)
+        self._stop_btn.grid(row=0, column=1, sticky="ew")
+
+    def _on_window_configure(self, event: Any) -> None:
+        if event.widget is not self:
+            return
+        self._apply_responsive_layout()
+
+    def _apply_responsive_layout(self) -> None:
+        width = max(self.winfo_width(), 1)
+        content_width = max(width - 40, 280)
+
+        self._headline.configure(wraplength=content_width)
+
+        setup_wrap = max(int(content_width * 0.45), 220) if width >= self._STACK_BREAKPOINT else content_width - 32
+        meta_wrap = max(setup_wrap - 130, 160)
+        for label in self._step_labels:
+            label.configure(wraplength=setup_wrap)
+        for label in self._meta_value_labels:
+            label.configure(wraplength=meta_wrap)
+
+        stacked = width < self._STACK_BREAKPOINT
+        if stacked != self._stacked_layout and self._workbench_grid and self._setup_panel and self._controls_panel:
+            self._stacked_layout = stacked
+            if stacked:
+                self._workbench_grid.grid_columnconfigure(0, weight=1)
+                self._workbench_grid.grid_columnconfigure(1, weight=0)
+                self._setup_panel.grid(
+                    row=0, column=0, columnspan=2, sticky="ew", padx=0, pady=(0, 8)
+                )
+                self._controls_panel.grid(
+                    row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=0
+                )
+            else:
+                self._workbench_grid.grid_columnconfigure(0, weight=2)
+                self._workbench_grid.grid_columnconfigure(1, weight=3)
+                self._setup_panel.grid(
+                    row=0, column=0, columnspan=1, sticky="nsew", padx=(0, 8), pady=0
+                )
+                self._controls_panel.grid(
+                    row=0, column=1, columnspan=1, sticky="nsew", padx=(8, 0), pady=0
+                )
+
+        narrow = width < self._NARROW_BREAKPOINT
+        if narrow != self._narrow_actions and self._action_bar and self._action_left and self._action_right:
+            self._narrow_actions = narrow
+            if narrow:
+                self._action_bar.grid_columnconfigure(0, weight=1)
+                self._action_bar.grid_columnconfigure(1, weight=0)
+                self._action_left.grid(row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(12, 0))
+                self._action_right.grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(8, 12))
+                self._start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+                self._stop_btn.grid(row=0, column=1, sticky="ew", padx=0)
+            else:
+                self._action_bar.grid_columnconfigure(0, weight=1)
+                self._action_bar.grid_columnconfigure(1, weight=0)
+                self._action_left.grid(row=0, column=0, columnspan=1, sticky="ew", padx=12, pady=12)
+                self._action_right.grid(row=0, column=1, columnspan=1, sticky="e", padx=12, pady=12)
+                self._start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+                self._stop_btn.grid(row=0, column=1, sticky="ew", padx=0)
 
     def _build_log_panel(self) -> None:
         wrap = ctk.CTkFrame(self, fg_color="transparent")
-        wrap.grid(row=2, column=0, sticky="nsew", padx=20, pady=(8, 20))
+        wrap.grid(row=3, column=0, sticky="nsew", padx=20, pady=(8, 20))
         wrap.grid_columnconfigure(0, weight=1)
         wrap.grid_rowconfigure(1, weight=1)
 
